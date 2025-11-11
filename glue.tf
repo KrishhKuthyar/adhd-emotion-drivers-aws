@@ -35,7 +35,9 @@ resource "aws_iam_role_policy" "glue_policy" {
           "arn:aws:s3:::${var.project}-bronze",
           "arn:aws:s3:::${var.project}-bronze/*",
           "arn:aws:s3:::${var.project}-silver",
-          "arn:aws:s3:::${var.project}-silver/*"
+          "arn:aws:s3:::${var.project}-silver/*",
+          "arn:aws:s3:::${var.project}-gold",
+          "arn:aws:s3:::${var.project}-gold/*"
         ]
       },
       {
