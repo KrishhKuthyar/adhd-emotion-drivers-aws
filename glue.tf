@@ -52,6 +52,14 @@ resource "aws_iam_role_policy" "glue_policy" {
             "arn:aws:s3:::aws-glue-assets-${data.aws_caller_identity.current.account_id}-${var.region}/*"
         ]
         },
+         {
+          Sid    = "AllowCloudWatchMetrics",
+           Effect = "Allow",
+          Action = [
+          "cloudwatch:PutMetricData"
+        ],
+        Resource = "*"
+        },
       {
         Sid    = "KMSDecrypt"
         Effect = "Allow"

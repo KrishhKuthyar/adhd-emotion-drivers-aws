@@ -4,7 +4,9 @@ from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
 from pyspark.sql import functions as F
-
+import boto3
+import json
+from pyspark.sql.types import StringType
 # ---------- Glue boilerplate ----------
 args = getResolvedOptions(sys.argv, ["JOB_NAME"])
 sc = SparkContext()
@@ -12,6 +14,7 @@ glueContext = GlueContext(sc)
 spark = glueContext.spark_session
 job = Job(glueContext)
 job.init(args["JOB_NAME"], args)
+comprehend = boto3.client("comprehend", region_name="us-east-1")
 
 # ---------- Paths ----------
 silver_path = "s3://krish-redditadhd-silver/adhd_posts_silver/"
@@ -135,6 +138,30 @@ df_gold = (
     )
 )
 
+# ---------- 4.5) AWS Comprehend Sentiment ----------
+# We send the cleaned text (combined_lower) to AWS Comprehend
+
+def detect_sentiment(text):
+    if not text or text.strip() == "":
+        return "UNKNOWN"
+    try:
+        resp = comprehend.detect_sentiment(
+            Text=text,
+            LanguageCode="en"
+        )
+        return resp.get("Sentiment", "UNKNOWN")
+    except Exception:
+        return "ERROR"
+
+# Register UDF
+sentiment_udf = F.udf(detect_sentiment, StringType())
+
+# Apply to dataset
+df_gold = df_gold.withColumn(
+    "sentiment",
+    sentiment_udf(F.col("combined_lower"))
+)
+
 # ---------- 5) Text for embedding / LLM ----------
 # Intuition:
 #   - clean_title / clean_body already have URLs stripped.
@@ -172,7 +199,7 @@ gold_columns = [
     "mentions_overwhelmed",
     "mentions_burnout",
     "mentions_anxiety",
-
+    "sentiment",
     "title",         # original title
     "body",          # original body
     "clean_title",
